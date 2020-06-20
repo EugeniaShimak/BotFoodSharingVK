@@ -5,3 +5,4 @@ requests==2.24.0
 six==1.15.0
 urllib3==1.25.9
 vk-api==11.8.0
+vk~=2.0.2
