@@ -4,6 +4,7 @@ from vk_api.utils import get_random_id
 from Auth import vk_api_auth_community, vk_api_auth_service
 from urllib.parse import urlparse
 import json
+from db import get_categories, get_sub_categories, add_to_users, add_to_groups, make_keyboard
 
 
 # отправка сообщния
@@ -103,6 +104,14 @@ KeyBoard = {"buttons": [
 KeyBoardClose = {"buttons": [], "one_time": True}
 
 
+def get_keyboard():
+    try:
+        kb = make_keyboard()
+    except Exception:
+        kb = KeyBoard
+    return kb
+
+
 # Добавление сообществ
 def add_communities_user(request):
     list_communities = []
@@ -110,44 +119,14 @@ def add_communities_user(request):
         for comm in get_communities_from_request(request):
             list_communities.append(comm)
             # тут надо схранять в бд
+            add_to_groups(event.user_id, comm)
             # print(list_communities)
             list_com = list_communities
-        write_msg(event.user_id, Answer.success_comm + Answer.choose_category_location, KeyBoard)
+        write_msg(event.user_id, Answer.success_comm + Answer.choose_category_location, get_keyboard())
     else:
         write_msg(event.user_id, Answer.wrong_comm, {})
         write_msg(event.user_id, Answer.standard, {})
     return list_communities
-
-
-# Работа с сообщениями
-longpoll = VkLongPoll(vk_api_auth_community)
-
-# Основной цикл
-for event in longpoll.listen():
-    # Если пришло новое сообщение
-    if event.type == VkEventType.MESSAGE_NEW:
-
-        # Если оно имеет метку для меня( то есть бота)
-        if event.to_me:
-            if hasattr(event, "attachments") and hasattr(event.attachments, "geo"):
-                print(event.attachments["geo"])
-                write_msg(event.user_id, Answer.success_geo, KeyBoard)
-            elif hasattr(event, "payload") and json.loads(event.payload)["button"] == str(ButtonsKeyBoard.category):
-                print(event.payload)
-                write_msg(event.user_id, Answer.success_category, KeyBoard)
-            elif hasattr(event, "payload") and json.loads(event.payload)["button"] == str(ButtonsKeyBoard.close):
-                print(event.payload)
-                write_msg(event.user_id, Answer.save_settings, KeyBoardClose)
-            elif event.text:
-                # Сообщение от пользователя
-                request = event.text.lower()
-
-                # Каменная логика ответа
-                if request.startswith(Commands.community):
-                    add_communities_user(request)
-                else:
-                    print(str(request))
-                    write_msg(event.user_id, Answer.standard, {})
 
 
 # функция обрезания url группы, чтобы остался только идентификатор или короткое имя
@@ -168,16 +147,53 @@ def get_group_id(group_name):
 # функция возвращает  последний пост группы, принимает в себя короткое имя группы или идентификатор
 def get_post(group_name):
     group_id = str(get_group_id(group_name))
-    # print("group_id" + group_id)
+    print("group_id" + group_id)
     data_wall = vk_api_auth_service.wall.get(owner_id="-" + str(group_id), domain=group_name, count=1, v=5.92)
-    # print("data_wall" + str(data_wall))
+    print("data_wall" + str(data_wall))
     for post in data_wall:
-        # print("post" + str(post))
+        print("post" + str(post))
         return post
+
+
+
 
 # # тестируемая группа
 # url = "https://vk.com/murmewmur"
 # # короткое имя
+# print("postdggddfg")
 # name_group = format_group_url(url)
 # # получаем пост по короткому имени сообщества
 # get_post(name_group)
+
+
+# Работа с сообщениями
+longpoll = VkLongPoll(vk_api_auth_community)
+
+
+# Основной цикл
+for event in longpoll.listen():
+    # Если пришло новое сообщение
+    if event.type == VkEventType.MESSAGE_NEW:
+
+        # Если оно имеет метку для меня( то есть бота)
+        if event.to_me:
+            if hasattr(event, "attachments") and hasattr(event.attachments, "geo"):
+                print(event.attachments["geo"])
+                write_msg(event.user_id, Answer.success_geo, get_keyboard())
+            elif hasattr(event, "payload") and json.loads(event.payload)["button"] == str(ButtonsKeyBoard.category):
+                print(event.payload)
+                write_msg(event.user_id, Answer.success_category, get_keyboard())
+            elif hasattr(event, "payload") and json.loads(event.payload)["button"] == str(ButtonsKeyBoard.close):
+                print(event.payload)
+                write_msg(event.user_id, Answer.save_settings, KeyBoardClose)
+            elif event.text:
+                # Сообщение от пользователя
+                request = event.text.lower()
+
+                # Каменная логика ответа
+                if request.startswith(Commands.community):
+                    add_communities_user(request)
+                else:
+                    print(str(request))
+                    write_msg(event.user_id, Answer.standard, {})
+

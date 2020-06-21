@@ -1,8 +1,9 @@
 certifi==2020.4.5.2
 chardet==3.0.4
 idna==2.9
+PyMySQL==0.9.3
 requests==2.24.0
 six==1.15.0
 urllib3==1.25.9
+vk==2.0.2
 vk-api==11.8.0
-vk~=2.0.2
